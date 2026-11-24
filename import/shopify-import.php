@@ -372,4 +372,49 @@ foreach ( $ibr_groups as $ibr_handle => $ibr_rows ) {
 	ibr_import_log( sprintf( 'Importiert: %s (%d Varianten, %d Fotos)', $ibr_main['Title'], count( $ibr_variants ), count( $ibr_by_url ) ) );
 }
 
+/* ---------- Beispiel-Farbpalette für die Farbwahl (Plugin ibr-farbwahl) ---------- */
+
+if ( post_type_exists( 'ibr_farbe' ) ) {
+	$ibr_palette = term_exists( 'paracord-beispiel', 'ibr_palette' );
+	if ( ! $ibr_palette ) {
+		$ibr_palette = wp_insert_term( 'Paracord (Beispielfarben)', 'ibr_palette', array( 'slug' => 'paracord-beispiel' ) );
+		$ibr_demo_colors = array(
+			'Sand' => '#CDB894', 'Beige' => '#D8C7AA', 'Weiß' => '#F2F0EB', 'Schwarz' => '#222222',
+			'Oliv' => '#6B6A3E', 'Guacamole' => '#8A9A5B', 'Tannengrün' => '#3F5147', 'Mint' => '#A8DCCB',
+			'Hellblau' => '#9DB8DE', 'Flieder' => '#B9A6D3', 'Lila' => '#6A3D8F', 'Rosé' => '#D9A3A0',
+			'Bordeaux' => '#7E1F2C', 'Rost' => '#984B2C', 'Cognac' => '#9C5B32', 'Neonpink' => '#FF3D8B',
+			'Neonorange' => '#FF6A2B',
+		);
+		$ibr_order = 0;
+		foreach ( $ibr_demo_colors as $ibr_name => $ibr_hex ) {
+			$ibr_color_id = wp_insert_post(
+				array(
+					'post_type'   => 'ibr_farbe',
+					'post_status' => 'publish',
+					'post_title'  => $ibr_name,
+					'menu_order'  => $ibr_order++,
+				)
+			);
+			update_post_meta( $ibr_color_id, '_ibr_fw_hex', $ibr_hex );
+			wp_set_object_terms( $ibr_color_id, (int) $ibr_palette['term_id'], 'ibr_palette' );
+		}
+		ibr_import_log( 'Beispiel-Farbpalette angelegt (' . count( $ibr_demo_colors ) . ' Farben).' );
+	}
+	$ibr_palette_id = (int) $ibr_palette['term_id'];
+
+	$ibr_fw_products = array(
+		'hundehalsband-friendship' => array( 'slots' => 3, 'labels' => '', 'attr' => 'Anzahl Farben' ),
+		'hundeleine-lotte'         => array( 'slots' => 2, 'labels' => 'Seilfarbe, Wicklung', 'attr' => '' ),
+	);
+	foreach ( $ibr_fw_products as $ibr_handle => $ibr_conf ) {
+		$ibr_ids = wc_get_products( array( 'limit' => 1, 'return' => 'ids', 'meta_key' => '_ibr_handle', 'meta_value' => $ibr_handle ) );
+		if ( $ibr_ids && ! get_post_meta( $ibr_ids[0], '_ibr_fw_palette', true ) ) {
+			update_post_meta( $ibr_ids[0], '_ibr_fw_palette', $ibr_palette_id );
+			update_post_meta( $ibr_ids[0], '_ibr_fw_slots', $ibr_conf['slots'] );
+			update_post_meta( $ibr_ids[0], '_ibr_fw_labels', $ibr_conf['labels'] );
+			update_post_meta( $ibr_ids[0], '_ibr_fw_slot_attr', $ibr_conf['attr'] );
+		}
+	}
+}
+
 ibr_import_log( "Success: Import fertig, $ibr_count neue Produkte." );
