@@ -52,3 +52,39 @@ add_filter(
 		return $robots;
 	}
 );
+
+/**
+ * Zusätzliche Reiter auf der Produktseite: Pflege, Sicherheit, Größe/Länge.
+ * Die Texte stehen als Produktfelder (_ibr_pflege, _ibr_sicherheit, _ibr_groesse, _ibr_laenge).
+ */
+add_filter(
+	'woocommerce_product_tabs',
+	static function ( array $tabs ): array {
+		global $product;
+		if ( ! $product instanceof WC_Product ) {
+			return $tabs;
+		}
+
+		$extra = array(
+			'_ibr_groesse'    => array( 'ibr_groesse', 'Halsumfang messen', 15 ),
+			'_ibr_laenge'     => array( 'ibr_laenge', 'Die richtige Länge', 16 ),
+			'_ibr_pflege'     => array( 'ibr_pflege', 'Pflegehinweise', 25 ),
+			'_ibr_sicherheit' => array( 'ibr_sicherheit', 'Sicherheitshinweise', 30 ),
+		);
+
+		foreach ( $extra as $meta => list( $key, $title, $priority ) ) {
+			$text = get_post_meta( $product->get_id(), $meta, true );
+			if ( '' === trim( (string) $text ) ) {
+				continue;
+			}
+			$tabs[ $key ] = array(
+				'title'    => $title,
+				'priority' => $priority,
+				'callback' => static function () use ( $text ): void {
+					echo wp_kses_post( wpautop( $text ) );
+				},
+			);
+		}
+		return $tabs;
+	}
+);

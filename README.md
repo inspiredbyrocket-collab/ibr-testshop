@@ -6,6 +6,6 @@ Shop-Repository) – bitte hier nichts von Hand ändern.
 
 - `theme/ibr-theme.zip` – das Theme
 - `mu-plugins/ibr-core.php` – Grundeinstellungen
-- `demo/` – Demo-Produkte und Fotos (Preise sind Platzhalter)
+- `import/` – Import-Skript und bereinigte Produktliste (nur aktive Produkte, ohne Einkaufspreise)
 
-Stand: 3d74dda
+Stand: e4977c7
