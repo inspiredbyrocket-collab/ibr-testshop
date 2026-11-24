@@ -12,7 +12,9 @@
  *
  * Aufruf: npm run wp -- eval-file wp-content/ibr-scripts/shopify-import.php
  * Optional: IBR_IMPORT_MAX_IMAGES (Fotos pro Produkt, Standard alle),
- *           IBR_IMPORT_CSV (Pfad zur CSV)
+ *           IBR_IMPORT_CSV (Pfad zur CSV),
+ *           IBR_IMPORT_REMOTE_IMAGES (true: Fotos nicht herunterladen, sondern direkt vom
+ *           Shopify-CDN anzeigen – für den Browser-Testshop, der nicht herunterladen kann)
  *
  * @package ibr-scripts
  */
@@ -146,7 +148,28 @@ function ibr_import_image( string $url, string $alt, int $parent ): int {
 
 	// Shopify liefert auf Wunsch kleinere Fassungen; 900 px reichen für den Shop.
 	$sized = add_query_arg( 'width', 900, $url );
-	$tmp   = download_url( $sized, 60 );
+
+	// Browser-Testshop: nur einen Verweis anlegen, das Foto lädt der Browser direkt von Shopify.
+	if ( defined( 'IBR_IMPORT_REMOTE_IMAGES' ) && IBR_IMPORT_REMOTE_IMAGES ) {
+		$id = wp_insert_attachment(
+			array(
+				'post_title'     => $alt,
+				'post_mime_type' => 'image/jpeg',
+				'post_status'    => 'inherit',
+				'guid'           => $sized,
+			),
+			false,
+			$parent
+		);
+		update_post_meta( $id, '_ibr_remote_url', $sized );
+		update_post_meta( $id, '_ibr_source', $key );
+		update_post_meta( $id, '_wp_attachment_image_alt', $alt );
+		// Die meisten Shop-Fotos sind Hochformat 9:16; genaue Maße sind ohne Download nicht bekannt.
+		wp_update_attachment_metadata( $id, array( 'width' => 900, 'height' => 1600, 'file' => '', 'sizes' => array() ) );
+		return (int) $id;
+	}
+
+	$tmp = download_url( $sized, 30 );
 	if ( is_wp_error( $tmp ) ) {
 		ibr_import_log( '  Foto nicht geladen: ' . $tmp->get_error_message() );
 		return 0;

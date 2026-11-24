@@ -88,3 +88,24 @@ add_filter(
 		return $tabs;
 	}
 );
+
+/**
+ * Fotos, die nur als Verweis existieren (Browser-Testshop), direkt von ihrer Quelle laden.
+ */
+add_filter(
+	'wp_get_attachment_url',
+	static function ( $url, $id ) {
+		$remote = get_post_meta( $id, '_ibr_remote_url', true );
+		return $remote ? $remote : $url;
+	},
+	10,
+	2
+);
+add_filter(
+	'wp_calculate_image_srcset',
+	static function ( $sources, $size, $src, $meta, $id ) {
+		return get_post_meta( $id, '_ibr_remote_url', true ) ? false : $sources;
+	},
+	10,
+	5
+);
