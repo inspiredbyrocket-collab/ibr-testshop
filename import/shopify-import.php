@@ -299,7 +299,7 @@ foreach ( $ibr_groups as $ibr_handle => $ibr_rows ) {
 		$ibr_product->set_attributes( $ibr_attributes );
 	} else {
 		ibr_import_variant_data( $ibr_product, $ibr_variants[0] );
-		ibr_import_sku( $ibr_product, $ibr_variants[0]['Variant SKU'] );
+		ibr_import_sku( $ibr_product, $ibr_variants[0]['Variant SKU'] ?? '' );
 	}
 
 	$ibr_id = $ibr_product->save();
@@ -354,7 +354,7 @@ foreach ( $ibr_groups as $ibr_handle => $ibr_rows ) {
 			}
 			$ibr_variation->set_attributes( $ibr_attrs );
 			ibr_import_variant_data( $ibr_variation, $ibr_row );
-			ibr_import_sku( $ibr_variation, $ibr_row['Variant SKU'] );
+			ibr_import_sku( $ibr_variation, $ibr_row['Variant SKU'] ?? '' );
 			if ( isset( $ibr_by_url[ $ibr_row['Variant Image'] ] ) ) {
 				$ibr_variation->set_image_id( $ibr_by_url[ $ibr_row['Variant Image'] ] );
 			}

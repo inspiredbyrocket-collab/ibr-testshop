@@ -8,4 +8,4 @@ Shop-Repository) – bitte hier nichts von Hand ändern.
 - `mu-plugins/ibr-core.php` – Grundeinstellungen
 - `import/` – Import-Skript und bereinigte Produktliste (nur aktive Produkte, ohne Einkaufspreise)
 
-Stand: aade617
+Stand: 4ad49ba
