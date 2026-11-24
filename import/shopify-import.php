@@ -249,6 +249,42 @@ while ( ( $ibr_line = fgetcsv( $ibr_fh, 0, ',', '"', '' ) ) !== false ) {
 }
 fclose( $ibr_fh );
 
+/*
+ * Modelle, die in Shopify als getrennte Produkte je Seilstärke angelegt sind, zu einem Produkt
+ * mit der Auswahl „Stärke“ zusammenführen. Preise, Bestände und Fotos bleiben je Stärke erhalten.
+ */
+$ibr_merges = array(
+	'hundeleine-lotte' => array(
+		'title' => 'Hundeleine LOTTE',
+		'attr'  => 'Stärke',
+		'parts' => array( 'hundeleine-lotte' => '10 mm', 'hundeleine-lotte-8-mm' => '8 mm' ),
+	),
+);
+foreach ( $ibr_merges as $ibr_target => $ibr_merge ) {
+	$ibr_merged   = array();
+	$ibr_position = 0;
+	foreach ( $ibr_merge['parts'] as $ibr_part => $ibr_value ) {
+		foreach ( $ibr_groups[ $ibr_part ] ?? array() as $ibr_row ) {
+			$ibr_row['Handle']        = $ibr_target;
+			$ibr_row['Option3 Name']  = $ibr_row['Option2 Name'];
+			$ibr_row['Option3 Value'] = $ibr_row['Option2 Value'];
+			$ibr_row['Option2 Name']  = $ibr_row['Option1 Name'];
+			$ibr_row['Option2 Value'] = $ibr_row['Option1 Value'];
+			$ibr_row['Option1 Name']  = $ibr_merge['attr'];
+			$ibr_row['Option1 Value'] = '' !== $ibr_row['Variant Price'] ? $ibr_value : '';
+			if ( '' !== $ibr_row['Image Src'] ) {
+				$ibr_row['Image Position'] = (string) ++$ibr_position;
+			}
+			$ibr_merged[] = $ibr_row;
+		}
+		unset( $ibr_groups[ $ibr_part ] );
+	}
+	if ( $ibr_merged ) {
+		$ibr_merged[0]['Title'] = $ibr_merge['title'];
+		$ibr_groups             = array( $ibr_target => $ibr_merged ) + $ibr_groups;
+	}
+}
+
 // Demo-Produkte aus früheren Ständen entfernen; jetzt gibt es echte Produkte.
 foreach ( wc_get_products( array( 'limit' => -1, 'status' => 'any', 'return' => 'ids', 'meta_key' => '_ibr_handle', 'meta_compare' => 'NOT EXISTS' ) ) as $ibr_old ) {
 	wc_get_product( $ibr_old )->delete( true );
@@ -373,66 +409,90 @@ foreach ( $ibr_groups as $ibr_handle => $ibr_rows ) {
 	ibr_import_log( sprintf( 'Importiert: %s (%d Varianten, %d Fotos)', $ibr_main['Title'], count( $ibr_variants ), count( $ibr_by_url ) ) );
 }
 
-/* ---------- Beispiel-Farbpalette für die Farbwahl (Plugin ibr-farbwahl) ---------- */
+/* ---------- Beispiel-Farbpaletten und -Optionen (Plugin ibr-produktoptionen) ---------- */
 
-if ( post_type_exists( 'ibr_farbe' ) ) {
-	$ibr_palette = term_exists( 'paracord-beispiel', 'ibr_palette' );
-	if ( ! $ibr_palette ) {
-		$ibr_palette = wp_insert_term( 'Paracord (Beispielfarben)', 'ibr_palette', array( 'slug' => 'paracord-beispiel' ) );
-		$ibr_demo_colors = array(
-			'Sand' => '#CDB894', 'Beige' => '#D8C7AA', 'Weiß' => '#F2F0EB', 'Schwarz' => '#222222',
-			'Oliv' => '#6B6A3E', 'Guacamole' => '#8A9A5B', 'Tannengrün' => '#3F5147', 'Mint' => '#A8DCCB',
-			'Hellblau' => '#9DB8DE', 'Flieder' => '#B9A6D3', 'Lila' => '#6A3D8F', 'Rosé' => '#D9A3A0',
-			'Bordeaux' => '#7E1F2C', 'Rost' => '#984B2C', 'Cognac' => '#9C5B32', 'Neonpink' => '#FF3D8B',
-			'Neonorange' => '#FF6A2B',
-		);
-		$ibr_order = 0;
-		foreach ( $ibr_demo_colors as $ibr_name => $ibr_hex ) {
-			$ibr_color_id = wp_insert_post(
-				array(
-					'post_type'   => 'ibr_farbe',
-					'post_status' => 'publish',
-					'post_title'  => $ibr_name,
-					'menu_order'  => $ibr_order++,
-				)
-			);
-			update_post_meta( $ibr_color_id, '_ibr_fw_hex', $ibr_hex );
-			wp_set_object_terms( $ibr_color_id, (int) $ibr_palette['term_id'], 'ibr_palette' );
-		}
-		ibr_import_log( 'Beispiel-Farbpalette angelegt (' . count( $ibr_demo_colors ) . ' Farben).' );
-	}
-	$ibr_palette_id = (int) $ibr_palette['term_id'];
-
-	$ibr_fw_products = array(
-		'hundehalsband-friendship' => array( 'slots' => 3, 'labels' => '', 'attr' => 'Anzahl Farben' ),
-		'hundeleine-lotte'         => array( 'slots' => 2, 'labels' => 'Seilfarbe, Wicklung', 'attr' => '' ),
-	);
-	foreach ( $ibr_fw_products as $ibr_handle => $ibr_conf ) {
-		$ibr_ids = wc_get_products( array( 'limit' => 1, 'return' => 'ids', 'meta_key' => '_ibr_handle', 'meta_value' => $ibr_handle ) );
-		if ( $ibr_ids && ! get_post_meta( $ibr_ids[0], '_ibr_fw_palette', true ) ) {
-			update_post_meta( $ibr_ids[0], '_ibr_fw_palette', $ibr_palette_id );
-			update_post_meta( $ibr_ids[0], '_ibr_fw_slots', $ibr_conf['slots'] );
-			update_post_meta( $ibr_ids[0], '_ibr_fw_labels', $ibr_conf['labels'] );
-			update_post_meta( $ibr_ids[0], '_ibr_fw_slot_attr', $ibr_conf['attr'] );
+/**
+ * Variante eines Produkts mit einem bestimmten Eigenschaftswert finden (z. B. Stärke = 8 mm).
+ *
+ * @return int[]
+ */
+function ibr_import_variations_with( int $product_id, string $attr, string $value ): array {
+	$ids = array();
+	foreach ( wc_get_product( $product_id )->get_children() as $child ) {
+		$variation = wc_get_product( $child );
+		if ( $variation && $variation->get_attribute( $attr ) === $value ) {
+			$ids[] = $child;
 		}
 	}
+	return $ids;
 }
 
-/* ---------- Beispiel-Längenwahl (Plugin ibr-produktoptionen) ---------- */
+function ibr_import_product_id( string $handle ): int {
+	$ids = wc_get_products( array( 'limit' => 1, 'return' => 'ids', 'meta_key' => '_ibr_handle', 'meta_value' => $handle ) );
+	return $ids ? (int) $ids[0] : 0;
+}
 
-if ( function_exists( 'ibr_len_settings' ) ) {
-	// Beispielwerte: Standard 2,00 m, Zusatzlängen und Wunschlänge, 2,00 € je angefangene 25 cm.
-	foreach ( array( 'hundeleine-lotte', 'hundeleine-lotte-8-mm' ) as $ibr_handle ) {
-		$ibr_ids = wc_get_products( array( 'limit' => 1, 'return' => 'ids', 'meta_key' => '_ibr_handle', 'meta_value' => $ibr_handle ) );
-		if ( $ibr_ids && ! get_post_meta( $ibr_ids[0], '_ibr_len_standard', true ) ) {
-			update_post_meta( $ibr_ids[0], '_ibr_len_standard', 200 );
-			update_post_meta( $ibr_ids[0], '_ibr_len_steps', '225, 250' );
-			update_post_meta( $ibr_ids[0], '_ibr_len_custom', 'yes' );
-			update_post_meta( $ibr_ids[0], '_ibr_len_min', 100 );
-			update_post_meta( $ibr_ids[0], '_ibr_len_max', 500 );
-			update_post_meta( $ibr_ids[0], '_ibr_len_surcharge', '2.00' );
-			update_post_meta( $ibr_ids[0], '_ibr_len_step_cm', 25 );
+if ( post_type_exists( 'ibr_farbe' ) && ! term_exists( 'paracord-beispiel', 'ibr_palette' ) ) {
+	$ibr_hex = array(
+		'Sand' => '#CDB894', 'Beige' => '#D8C7AA', 'Weiß' => '#F2F0EB', 'Schwarz' => '#222222',
+		'Oliv' => '#6B6A3E', 'Guacamole' => '#8A9A5B', 'Tannengrün' => '#3F5147', 'Mint' => '#A8DCCB',
+		'Hellblau' => '#9DB8DE', 'Flieder' => '#B9A6D3', 'Lila' => '#6A3D8F', 'Rosé' => '#D9A3A0',
+		'Bordeaux' => '#7E1F2C', 'Rost' => '#984B2C', 'Cognac' => '#9C5B32', 'Neonpink' => '#FF3D8B',
+		'Neonorange' => '#FF6A2B',
+	);
+	// Beispiel: 8 mm und 10 mm haben teils andere Farben. Eine Farbe kann in mehreren Paletten stecken.
+	$ibr_palettes = array(
+		'paracord-beispiel' => array( 'Paracord (Beispielfarben)', array_keys( $ibr_hex ) ),
+		'seil-10-mm-beispiel' => array( 'Seil 10 mm (Beispielfarben)', array( 'Sand', 'Beige', 'Weiß', 'Schwarz', 'Oliv', 'Guacamole', 'Tannengrün', 'Hellblau', 'Bordeaux', 'Cognac' ) ),
+		'seil-8-mm-beispiel'  => array( 'Seil 8 mm (Beispielfarben)', array( 'Sand', 'Beige', 'Schwarz', 'Oliv', 'Mint', 'Flieder', 'Rosé', 'Rost', 'Neonpink', 'Neonorange' ) ),
+	);
+	$ibr_color_ids = array();
+	$ibr_order     = 0;
+	foreach ( $ibr_hex as $ibr_name => $ibr_value ) {
+		$ibr_color_ids[ $ibr_name ] = wp_insert_post(
+			array( 'post_type' => 'ibr_farbe', 'post_status' => 'publish', 'post_title' => $ibr_name, 'menu_order' => $ibr_order++ )
+		);
+		update_post_meta( $ibr_color_ids[ $ibr_name ], '_ibr_fw_hex', $ibr_value );
+	}
+	foreach ( $ibr_palettes as $ibr_slug => list( $ibr_title, $ibr_names ) ) {
+		$ibr_term = wp_insert_term( $ibr_title, 'ibr_palette', array( 'slug' => $ibr_slug ) );
+		foreach ( $ibr_names as $ibr_name ) {
+			wp_set_object_terms( $ibr_color_ids[ $ibr_name ], (int) $ibr_term['term_id'], 'ibr_palette', true );
 		}
+	}
+	ibr_import_log( 'Beispiel-Farbpaletten angelegt (Paracord, Seil 8 mm, Seil 10 mm).' );
+
+	$ibr_palette = static fn( string $slug ) => (int) get_term_by( 'slug', $slug, 'ibr_palette' )->term_id;
+
+	// FRIENDSHIP: eine Palette, Anzahl der Farben aus der Variante „Anzahl Farben“.
+	$ibr_id = ibr_import_product_id( 'hundehalsband-friendship' );
+	if ( $ibr_id ) {
+		update_post_meta( $ibr_id, '_ibr_fw_palette', $ibr_palette( 'paracord-beispiel' ) );
+		update_post_meta( $ibr_id, '_ibr_fw_slots', 3 );
+		update_post_meta( $ibr_id, '_ibr_fw_slot_attr', 'Anzahl Farben' );
+	}
+
+	// LOTTE: Farben und Aufpreis hängen von der Stärke ab.
+	$ibr_id = ibr_import_product_id( 'hundeleine-lotte' );
+	if ( $ibr_id ) {
+		update_post_meta( $ibr_id, '_ibr_fw_slots', 2 );
+		update_post_meta( $ibr_id, '_ibr_fw_labels', 'Seilfarbe, Wicklung' );
+		foreach ( array( '10 mm' => array( 'seil-10-mm-beispiel', '3.00' ), '8 mm' => array( 'seil-8-mm-beispiel', '2.75' ) ) as $ibr_staerke => list( $ibr_slug, $ibr_rate ) ) {
+			foreach ( ibr_import_variations_with( $ibr_id, 'Stärke', $ibr_staerke ) as $ibr_var ) {
+				update_post_meta( $ibr_var, '_ibr_fw_palette', $ibr_palette( $ibr_slug ) );
+				update_post_meta( $ibr_var, '_ibr_len_surcharge', $ibr_rate );
+			}
+		}
+		ibr_fw_refresh_variation_flag( $ibr_id );
+
+		// Längenwahl: Standard 2,00 m, 2,25 m, 2,50 m oder Wunschlänge; Aufpreis je 25 cm (10 mm 3,00 €, 8 mm 2,75 €).
+		update_post_meta( $ibr_id, '_ibr_len_standard', 200 );
+		update_post_meta( $ibr_id, '_ibr_len_steps', '225, 250' );
+		update_post_meta( $ibr_id, '_ibr_len_custom', 'yes' );
+		update_post_meta( $ibr_id, '_ibr_len_min', 100 );
+		update_post_meta( $ibr_id, '_ibr_len_max', 500 );
+		update_post_meta( $ibr_id, '_ibr_len_surcharge', '3.00' );
+		update_post_meta( $ibr_id, '_ibr_len_step_cm', 25 );
 	}
 }
 
