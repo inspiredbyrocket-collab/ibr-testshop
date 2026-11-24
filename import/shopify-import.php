@@ -418,4 +418,22 @@ if ( post_type_exists( 'ibr_farbe' ) ) {
 	}
 }
 
+/* ---------- Beispiel-Längenwahl (Plugin ibr-produktoptionen) ---------- */
+
+if ( function_exists( 'ibr_len_settings' ) ) {
+	// Beispielwerte: Standard 2,00 m, Zusatzlängen und Wunschlänge, 2,00 € je angefangene 25 cm.
+	foreach ( array( 'hundeleine-lotte', 'hundeleine-lotte-8-mm' ) as $ibr_handle ) {
+		$ibr_ids = wc_get_products( array( 'limit' => 1, 'return' => 'ids', 'meta_key' => '_ibr_handle', 'meta_value' => $ibr_handle ) );
+		if ( $ibr_ids && ! get_post_meta( $ibr_ids[0], '_ibr_len_standard', true ) ) {
+			update_post_meta( $ibr_ids[0], '_ibr_len_standard', 200 );
+			update_post_meta( $ibr_ids[0], '_ibr_len_steps', '225, 250' );
+			update_post_meta( $ibr_ids[0], '_ibr_len_custom', 'yes' );
+			update_post_meta( $ibr_ids[0], '_ibr_len_min', 100 );
+			update_post_meta( $ibr_ids[0], '_ibr_len_max', 500 );
+			update_post_meta( $ibr_ids[0], '_ibr_len_surcharge', '2.00' );
+			update_post_meta( $ibr_ids[0], '_ibr_len_step_cm', 25 );
+		}
+	}
+}
+
 ibr_import_log( "Success: Import fertig, $ibr_count neue Produkte." );
