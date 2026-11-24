@@ -13,8 +13,8 @@
  * Aufruf: npm run wp -- eval-file wp-content/ibr-scripts/shopify-import.php
  * Optional: IBR_IMPORT_MAX_IMAGES (Fotos pro Produkt, Standard alle),
  *           IBR_IMPORT_CSV (Pfad zur CSV),
- *           IBR_IMPORT_REMOTE_IMAGES (true: Fotos nicht herunterladen, sondern direkt vom
- *           Shopify-CDN anzeigen – für den Browser-Testshop, der nicht herunterladen kann)
+ *           IBR_IMPORT_IMAGE_DIR (Ordner mit vorab geladenen Fotos <md5(URL)>.jpg – Browser-Testshop),
+ *           IBR_IMPORT_REMOTE_IMAGES (true: nur Verweis aufs Shopify-CDN, Foto lädt der Browser)
  *
  * @package ibr-scripts
  */
@@ -170,7 +170,18 @@ function ibr_import_image( string $url, string $alt, int $parent ): int {
 		return (int) $id;
 	}
 
-	$tmp = download_url( $sized, 30 );
+	// Browser-Testshop: Das Foto hat Playground vorab abgeholt und hier abgelegt (gleiche Herkunft, jeder Browser zeigt es).
+	if ( defined( 'IBR_IMPORT_IMAGE_DIR' ) ) {
+		$local = IBR_IMPORT_IMAGE_DIR . '/' . $key . '.jpg';
+		if ( ! file_exists( $local ) ) {
+			ibr_import_log( '  Foto nicht vorab geladen: ' . basename( strtok( $url, '?' ) ) );
+			return 0;
+		}
+		$tmp = wp_tempnam( $key . '.jpg' );
+		copy( $local, $tmp );
+	} else {
+		$tmp = download_url( $sized, 30 );
+	}
 	if ( is_wp_error( $tmp ) ) {
 		ibr_import_log( '  Foto nicht geladen: ' . $tmp->get_error_message() );
 		return 0;
