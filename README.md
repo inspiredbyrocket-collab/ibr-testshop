@@ -8,4 +8,4 @@ Shop-Repository) – bitte hier nichts von Hand ändern.
 - `mu-plugins/ibr-core.php` – Grundeinstellungen
 - `demo/` – Demo-Produkte und Fotos (Preise sind Platzhalter)
 
-Stand: 161c5a9
+Stand: 3d74dda
