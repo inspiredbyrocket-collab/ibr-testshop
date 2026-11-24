@@ -113,7 +113,7 @@ function ibr_import_category_for( string $type, string $title, array $cats ): in
 }
 
 // Diese Stücke erscheinen zuerst (Startseite „Eure Favoriten“).
-$ibr_favorites = array( 'hundeleine-maya', 'hundehalsband-friendship', 'hundeleine-lotte-10-mm', 'handykette-leo' );
+$ibr_favorites = array( 'hundeleine-maya', 'hundehalsband-friendship', 'hundeleine-lotte', 'handykette-leo' );
 
 /* ---------- Hilfsfunktionen ---------- */
 
@@ -281,6 +281,11 @@ foreach ( $ibr_groups as $ibr_handle => $ibr_rows ) {
 	$ibr_product->set_slug( $ibr_handle );
 	$ibr_product->set_status( 'publish' );
 	$ibr_product->set_description( wp_kses_post( $ibr_main['Body (HTML)'] ) );
+	// Kurzbeschreibung unter dem Preis: die SEO-Beschreibung aus Shopify (kurz und passend),
+	// sonst schneidet WordPress den Anfang der langen Beschreibung ab.
+	if ( '' !== trim( $ibr_main['SEO Description'] ?? '' ) ) {
+		$ibr_product->set_short_description( esc_html( trim( $ibr_main['SEO Description'] ) ) );
+	}
 	$ibr_product->set_category_ids( array( ibr_import_category_for( $ibr_main['Type'], $ibr_main['Title'], $ibr_cats ) ) );
 	$ibr_fav = array_search( $ibr_handle, $ibr_favorites, true );
 	$ibr_product->set_menu_order( false === $ibr_fav ? 100 + $ibr_count : $ibr_fav + 1 );
