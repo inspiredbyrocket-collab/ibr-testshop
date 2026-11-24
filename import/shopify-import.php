@@ -121,7 +121,8 @@ $ibr_favorites = array( 'hundeleine-maya', 'hundehalsband-friendship', 'hundelei
  * Optionsnamen aus Shopify säubern: „Beschläge:“ → „Beschläge“.
  */
 function ibr_import_option_name( string $name ): string {
-	return trim( preg_replace( '/:\s*$|:\s*(?=\()/u', '', trim( $name ) ) );
+	$name = preg_replace( '/:\s*(?=\()/u', ' ', trim( $name ) ); // „Halsumfang: (in cm)“ → „Halsumfang (in cm)“
+	return trim( preg_replace( '/:\s*$/u', '', $name ) );        // „Beschläge:“ → „Beschläge“
 }
 
 /**
