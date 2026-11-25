@@ -496,11 +496,11 @@ if ( post_type_exists( 'ibr_farbe' ) && ! term_exists( 'paracord-beispiel', 'ibr
 		}
 		ibr_fw_refresh_variation_flag( $ibr_id );
 
-		// Längenwahl: Standard 2,00 m, 2,25 m, 2,50 m oder Wunschlänge; Aufpreis je 25 cm (10 mm 3,00 €, 8 mm 2,75 €).
+		// Längenwahl: Standard 2,00 m, 2,25 m, 2,50 m oder Wunschlänge ab 2,00 m; Aufpreis je 25 cm (10 mm 3,00 €, 8 mm 2,75 €).
 		update_post_meta( $ibr_id, '_ibr_len_standard', 200 );
 		update_post_meta( $ibr_id, '_ibr_len_steps', '225, 250' );
 		update_post_meta( $ibr_id, '_ibr_len_custom', 'yes' );
-		update_post_meta( $ibr_id, '_ibr_len_min', 100 );
+		update_post_meta( $ibr_id, '_ibr_len_min', 200 );
 		update_post_meta( $ibr_id, '_ibr_len_max', 500 );
 		update_post_meta( $ibr_id, '_ibr_len_surcharge', '3.00' );
 		update_post_meta( $ibr_id, '_ibr_len_step_cm', 25 );
