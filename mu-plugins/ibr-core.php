@@ -66,10 +66,10 @@ add_filter(
 		}
 
 		$extra = array(
-			'_ibr_groesse'    => array( 'ibr_groesse', 'Halsumfang messen', 15 ),
-			'_ibr_laenge'     => array( 'ibr_laenge', 'Die richtige Länge', 16 ),
-			'_ibr_pflege'     => array( 'ibr_pflege', 'Pflegehinweise', 25 ),
-			'_ibr_sicherheit' => array( 'ibr_sicherheit', 'Sicherheitshinweise', 30 ),
+			'_ibr_groesse'    => array( 'ibr_groesse', 'Halsumfang', 15 ),
+			'_ibr_laenge'     => array( 'ibr_laenge', 'Länge', 16 ),
+			'_ibr_pflege'     => array( 'ibr_pflege', 'Pflege', 25 ),
+			'_ibr_sicherheit' => array( 'ibr_sicherheit', 'Sicherheit', 30 ),
 		);
 
 		foreach ( $extra as $meta => list( $key, $title, $priority ) ) {
@@ -88,6 +88,30 @@ add_filter(
 		return $tabs;
 	}
 );
+
+/**
+ * Reiter kurz benennen (passen so auf dem Handy nebeneinander) und die doppelten
+ * Überschriften in den Reitern weglassen – der Reiter sagt schon, worum es geht.
+ */
+add_filter(
+	'woocommerce_product_tabs',
+	static function ( array $tabs ): array {
+		global $product;
+		if ( isset( $tabs['description'] ) ) {
+			$tabs['description']['title'] = 'Beschreibung';
+		}
+		if ( isset( $tabs['additional_information'] ) ) {
+			$tabs['additional_information']['title'] = 'Details';
+		}
+		if ( isset( $tabs['reviews'] ) && $product instanceof WC_Product ) {
+			$tabs['reviews']['title'] = sprintf( 'Bewertungen (%d)', $product->get_review_count() );
+		}
+		return $tabs;
+	},
+	99
+);
+add_filter( 'woocommerce_product_description_heading', '__return_empty_string' );
+add_filter( 'woocommerce_product_additional_information_heading', '__return_empty_string' );
 
 /**
  * Fotos, die nur als Verweis existieren (Browser-Testshop), direkt von ihrer Quelle laden.
