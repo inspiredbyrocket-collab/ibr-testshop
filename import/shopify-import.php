@@ -504,6 +504,9 @@ if ( post_type_exists( 'ibr_farbe' ) && ! term_exists( 'paracord-beispiel', 'ibr
 		update_post_meta( $ibr_id, '_ibr_len_max', 500 );
 		update_post_meta( $ibr_id, '_ibr_len_surcharge', '3.00' );
 		update_post_meta( $ibr_id, '_ibr_len_step_cm', 25 );
+
+		// Kurze Texte auf den Stärke-Karten (Platzhalter, im Produkt unter „Auswahl-Texte“ änderbar).
+		update_post_meta( $ibr_id, '_ibr_opt_desc', "8 mm: leicht & fein, für kleine Hunde\n10 mm: kräftig & griffig, für große Hunde" );
 	}
 }
 
